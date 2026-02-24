@@ -21,6 +21,7 @@
 with lib;
 
 let
+  keyFile = pkgs.writeText "keyfile" ''ghaf'';
   rootfsImage = pkgs.callPackage config.sdImage.rootFilesystemCreator (
     {
       inherit (config.sdImage) storePaths;
@@ -278,6 +279,7 @@ in
           fi
 
           root_fs=${config.sdImage.rootFilesystemImage}
+
           ${lib.optionalString config.sdImage.compressImage ''
             root_fs=./root-fs.img
             echo "Decompressing rootfs image"
@@ -306,6 +308,16 @@ in
 
           # Copy the rootfs into the SD image
           eval $(partx $img -o START,SECTORS --nr 2 --pairs)
+
+          chmod 755 $root_fs
+          ${pkgs.pkgsBuildBuild.cryptsetup}/bin/cryptsetup reencrypt \
+            --encrypt \
+            --type luks2 \
+            --batch-mode \
+            --reduce-device-size $((16 * 1024 * 1024)) \
+            --key-file ${keyFile} \
+            $root_fs
+
           dd conv=notrunc if=$root_fs of=$img seek=$START count=$SECTORS
 
           # Create a FAT32 /boot/firmware partition of suitable size into firmware_part.img
