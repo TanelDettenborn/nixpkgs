@@ -179,6 +179,15 @@ in
       '';
     };
 
+    preBuildCommands = mkOption {
+      example = literalExpression "'' chmod u+w $root_fs && resize2fs $root_fs 15G ''";
+      default = "";
+      description = ''
+        Shell commands to run before the image is built.
+        For example, this option can be used to adjust the rootfs.
+      '';
+    };
+
     postBuildCommands = mkOption {
       example = literalExpression "'' dd if=\${pkgs.myBootLoader}/SPL of=$img bs=1024 seek=1 conv=notrunc ''";
       default = "";
@@ -283,6 +292,8 @@ in
             echo "Decompressing rootfs image"
             zstd -d --no-progress "${config.sdImage.rootFilesystemImage}" -o $root_fs
           ''}
+
+          ${config.sdImage.preBuildCommands}
 
           # Gap in front of the first partition, in MiB
           gap=${toString config.sdImage.firmwarePartitionOffset}
